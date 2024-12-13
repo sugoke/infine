@@ -1,1 +1,11 @@
 node_modules/
+# Meteor-specific files
+node_modules/
+.meteor/local/
+.meteor/cordova-build/
+
+# Other temporary files
+*.log
+*.swp
+.DS_Store
+Thumbs.db
