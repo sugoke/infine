@@ -23,7 +23,7 @@ numeral.register('locale', 'fr', {
 const i18n = {
   en: {
     pageTitle: "Prime Real Estate Financing Calculator",
-    labelPurchasePrice: "Purchase Price (including acquisition costs)",
+    labelPurchasePrice: "Purchase Price",
     labelEuribor: "EURIBOR 3M",
     labelBankMargin: "Bank Margin (%)",
     labelLtvProperty: "Loan To Value (Property) (%)",
@@ -33,7 +33,7 @@ const i18n = {
     labelEmailAddress: "Email to receive the simulation",
     calculateBtn: "Calculate",
     resultsTitle: "Results (Indicative):",
-    resInterestRateLabel: "Interest Rate (Annual):",
+    resInterestRateLabel: "Interest Rate at Inception:",
     resTotalLoanLabel: "Total Loan Amount:",
     resAnnualLoanCostLabel: "Annual Loan Cost (Interest):",
     resCollateralRequiredLabel: "Financial Collateral Required:",
@@ -46,7 +46,7 @@ const i18n = {
   },
   fr: {
     pageTitle: "Calculateur de Financement Immobilier Prime",
-    labelPurchasePrice: "Prix d'achat (frais inclus)",
+    labelPurchasePrice: "Prix d'achat",
     labelEuribor: "EURIBOR 3M",
     labelBankMargin: "Marge Bancaire (%)",
     labelLtvProperty: "Loan To Value (Propriété) (%)",
@@ -56,7 +56,7 @@ const i18n = {
     labelEmailAddress: "Email pour recevoir la simulation",
     calculateBtn: "Calculer",
     resultsTitle: "Résultats (Indicatifs) :",
-    resInterestRateLabel: "Taux d'Intérêt (Annuel) :",
+    resInterestRateLabel: "Taux d'Intérêt Initial :",
     resTotalLoanLabel: "Montant Total du Prêt :",
     resAnnualLoanCostLabel: "Coût Annuel du Prêt (Intérêts) :",
     resCollateralRequiredLabel: "Garantie Financière Requise :",
@@ -135,29 +135,42 @@ Template.calculator.events({
 
   'input .number-input'(event) {
     const input = event.target;
-    input.value = input.value.replace(/[^\d.-]/g, '');
+    if (input.type === 'text') {
+      // For currency inputs (purchasePrice and annualRevenue)
+      let value = input.value.replace(/[^0-9]/g, '');
+      
+      // Show warning if format is incorrect
+      if (!/^\d*$/.test(value)) {
+        input.classList.add('is-invalid');
+      } else {
+        input.classList.remove('is-invalid');
+        // Format with spaces for thousands
+        if (value) {
+          value = parseInt(value, 10).toLocaleString('fr-FR');
+          input.value = value;
+        }
+      }
+    }
   },
 
   'submit #financing-form'(event) {
     event.preventDefault();
-
-    // Get raw numeric values
-    const purchasePrice = Number(event.target.purchasePrice.value);
-    const euribor = Number(event.target.euribor.value) / 100;
-    const bankMargin = Number(event.target.bankMargin.value) / 100;
-    const ltvProperty = Number(event.target.ltvProperty.value) / 100;
-    const portfolioYield = Number(event.target.portfolioYield.value) / 100;
-    const annualRevenue = Number(event.target.annualRevenue.value);
+    const purchasePrice = getNumericValue(event.target.purchasePrice.value);
+    const euribor = getNumericValue(event.target.euribor.value);
+    const bankMargin = getNumericValue(event.target.bankMargin.value);
+    const ltvProperty = getNumericValue(event.target.ltvProperty.value);
+    const portfolioYield = getNumericValue(event.target.portfolioYield.value);
+    const annualRevenue = getNumericValue(event.target.annualRevenue.value);
 
     // Total loan is equal to purchase price
     const totalLoan = purchasePrice;
     console.log('Total Loan:', totalLoan);
 
-    // Calculate mortgage part (60% of property value)
-    const mortgagePart = purchasePrice * 0.60;
+    // Calculate mortgage part (using ltvProperty from input)
+    const mortgagePart = purchasePrice * (ltvProperty / 100);
     console.log('Mortgage Part:', mortgagePart);
 
-    // Calculate required portfolio (60% of total loan)
+    // Calculate required portfolio (hardcoded 60%)
     const portfolioRequired = totalLoan * 0.60;
     console.log('Portfolio Required:', portfolioRequired);
 
@@ -165,22 +178,43 @@ Template.calculator.events({
     const lombardPart = totalLoan - mortgagePart;
     console.log('Lombard Part:', lombardPart);
 
-    // Calculate interest rate (Euribor + margin)
-    const interestRate = euribor + bankMargin;
+    // Calculate interest rate (Euribor + margin) - convert from percentage to decimal
+    const interestRate = (euribor + bankMargin) / 100;
     console.log('Interest Rate:', interestRate);
 
-    // Calculate annual loan cost
+    // Calculate annual loan cost using the decimal interest rate
     const annualLoanCost = totalLoan * interestRate;
     console.log('Annual Loan Cost:', annualLoanCost);
 
-    // Calculate annual portfolio cash flow instead of quarterly
-    const annualCashFlow = portfolioRequired * portfolioYield;
+    // Calculate annual portfolio cash flow (using decimal percentage)
+    const annualCashFlow = portfolioRequired * (portfolioYield / 100);
     console.log('Annual Cash Flow:', annualCashFlow);
 
-    // Calculate affordability ratio
-    const affordabilityRatio = annualLoanCost / annualRevenue;
-    const isAffordable = annualLoanCost <= (annualRevenue * 0.35);
-    console.log('Affordability:', { ratio: affordabilityRatio, isAffordable });
+    // Calculate affordability ratio (handle case when annualRevenue is 0)
+    let affordabilityRatio = 0;
+    let isAffordable = false;
+    
+    if (annualRevenue > 0) {
+      affordabilityRatio = annualLoanCost / annualRevenue;
+      isAffordable = annualLoanCost <= (annualRevenue * 0.35);
+    }
+    
+    console.log('Affordability:', { 
+      ratio: affordabilityRatio, 
+      isAffordable, 
+      annualLoanCost, 
+      annualRevenue 
+    });
+
+    // Update affordability display
+    const affordabilityText = annualRevenue > 0
+      ? `${isAffordable ? 'Yes' : 'No'}, annual cost is ${formatPercentage(affordabilityRatio)} of annual revenue`
+      : 'Please enter annual revenue to calculate affordability';
+
+    document.getElementById('affordability').textContent = affordabilityText;
+    document.getElementById('affordability').className = annualRevenue > 0
+      ? (isAffordable ? 'status-value success-bg' : 'status-value warning-bg')
+      : 'status-value';
 
     // Update display
     document.querySelector('.results').style.display = 'block';
@@ -192,11 +226,21 @@ Template.calculator.events({
     document.getElementById('mortgagePart').textContent = formatCurrency(mortgagePart);
     document.getElementById('lombardPart').textContent = formatCurrency(lombardPart);
 
-    const affordabilityElement = document.querySelector('.affordability-result');
-    affordabilityElement.style.display = 'block';
-    document.getElementById('affordability').textContent = isAffordable 
-        ? `Yes, annual cost is ${formatPercentage(affordabilityRatio)}% of annual revenue`
-        : `No, annual cost is ${formatPercentage(affordabilityRatio)}% of annual revenue`;
+    // Inside the submit handler, after calculating mortgage and lombard parts
+    const mortgagePercentage = (mortgagePart / totalLoan) * 100;
+    const lombardPercentage = (lombardPart / totalLoan) * 100;
+
+    // Update progress bars
+    const mortgageBar = document.getElementById('mortgageBar');
+    const lombardBar = document.getElementById('lombardBar');
+
+    mortgageBar.style.width = `${mortgagePercentage}%`;
+    mortgageBar.setAttribute('aria-valuenow', mortgagePercentage);
+    mortgageBar.textContent = `Mortgage: ${formatCurrency(mortgagePart)}`;
+
+    lombardBar.style.width = `${lombardPercentage}%`;
+    lombardBar.setAttribute('aria-valuenow', lombardPercentage);
+    lombardBar.textContent = `Lombard: ${formatCurrency(lombardPart)}`;
   }
 });
 
@@ -207,10 +251,16 @@ function parseFormattedNumber(value) {
 
 function formatCurrency(value) {
   if (!value && value !== 0) return '€0';
-  return `€${value.toLocaleString('fr-FR')}`;
+  // Use numeral.js for consistent formatting
+  return `€${numeral(value).format('0,0')}`;
 }
 
 function formatPercentage(value) {
   if (!value && value !== 0) return '0%';
-  return `${(value * 100).toFixed(2)}`;
+  return `${(value * 100).toFixed(2)}%`;
+}
+
+// When getting values from inputs, use this helper:
+function getNumericValue(value) {
+  return parseFloat(value.replace(/[€%\s]/g, '').replace(/,/g, ''));
 }
