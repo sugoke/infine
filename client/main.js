@@ -246,7 +246,7 @@ Template.calculator.events({
   'click .send-results'(event) {
     const email = document.getElementById('emailResults').value;
     if (!email) {
-      alert('Please enter an email address');
+      showEmailModal('error', 'Please enter an email address');
       return;
     }
 
@@ -263,10 +263,10 @@ Template.calculator.events({
 
     Meteor.call('sendResultsEmail', { to: email, results }, (error) => {
       if (error) {
-        alert('Failed to send email. Please try again.');
+        showEmailModal('error', 'Failed to send email. Please try again.');
         console.error('Email error:', error);
       } else {
-        alert('Results sent successfully!');
+        showEmailModal('success', 'Results sent successfully!');
         document.getElementById('emailResults').value = '';
       }
     });
@@ -292,4 +292,30 @@ function formatPercentage(value) {
 // When getting values from inputs, use this helper:
 function getNumericValue(value) {
   return parseFloat(value.replace(/[€%\s]/g, '').replace(/,/g, ''));
+}
+
+function showEmailModal(type, message) {
+  const modalBody = document.getElementById('emailModalBody');
+  const modalTitle = document.getElementById('emailModalLabel');
+  
+  if (type === 'success') {
+    modalBody.innerHTML = `
+      <div class="alert alert-success mb-0">
+        <i class="fas fa-check-circle me-2"></i>
+        ${message}
+      </div>
+    `;
+    modalTitle.textContent = 'Success';
+  } else {
+    modalBody.innerHTML = `
+      <div class="alert alert-danger mb-0">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        ${message}
+      </div>
+    `;
+    modalTitle.textContent = 'Error';
+  }
+
+  const modal = new bootstrap.Modal(document.getElementById('emailModal'));
+  modal.show();
 }
