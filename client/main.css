@@ -402,4 +402,25 @@
   background-color: #DD772A;
   border-color: #DD772A;
   color: white;
+}
+
+.email-results {
+  border: 1px solid #eee;
+}
+
+.email-results .input-group {
+  max-width: 100%;
+}
+
+.send-results {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 767px) {
+  .send-results {
+    margin-top: 1rem;
+  }
 } 

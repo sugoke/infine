@@ -241,6 +241,35 @@ Template.calculator.events({
     lombardBar.style.width = `${lombardPercentage}%`;
     lombardBar.setAttribute('aria-valuenow', lombardPercentage);
     lombardBar.textContent = `Lombard: ${formatCurrency(lombardPart)}`;
+  },
+
+  'click .send-results'(event) {
+    const email = document.getElementById('emailResults').value;
+    if (!email) {
+      alert('Please enter an email address');
+      return;
+    }
+
+    const results = {
+      interestRate: document.getElementById('interestRate').textContent,
+      totalLoan: document.getElementById('totalLoan').textContent,
+      annualLoanCost: document.getElementById('annualLoanCost').textContent,
+      collateralRequired: document.getElementById('collateralRequired').textContent,
+      annualCashFlow: document.getElementById('quarterlyCashFlow').textContent,
+      affordability: document.getElementById('affordability').textContent,
+      mortgagePart: document.getElementById('mortgageBar').textContent,
+      lombardPart: document.getElementById('lombardBar').textContent
+    };
+
+    Meteor.call('sendResultsEmail', { to: email, results }, (error) => {
+      if (error) {
+        alert('Failed to send email. Please try again.');
+        console.error('Email error:', error);
+      } else {
+        alert('Results sent successfully!');
+        document.getElementById('emailResults').value = '';
+      }
+    });
   }
 });
 
