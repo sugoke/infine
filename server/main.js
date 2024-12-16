@@ -265,6 +265,16 @@ Ces calculs sont fournis à titre indicatif et ne constituent ni un conseil ni u
             </div>
           </div>
 
+          <div style="padding: 1rem; border-bottom: 1px solid #eee;">
+            <div style="color: #666; margin-bottom: 0.5rem;">
+              <i class="fas fa-calculator" style="color: #DD772A;"></i>
+              Net Cost of the Loan
+            </div>
+            <div style="font-size: 1.2rem; font-weight: 500; color: ${data.results.netCost >= 0 ? '#27ae60' : '#e74c3c'};">
+              ${data.results.netCost}
+            </div>
+          </div>
+
           <div style="padding: 1rem;">
             <div style="color: #666; margin-bottom: 0.5rem;">
               <i class="fas fa-balance-scale" style="color: #DD772A;"></i>

@@ -42,7 +42,8 @@ const i18n = {
     resMortgagePartLabel: "Mortgage Part (60% of Property Value):",
     resLombardPartLabel: "Lombard Part (Guaranteed by Portfolio):",
     disclaimerTitle: "Disclaimer",
-    disclaimerText: "These calculations are indicative and do not constitute any form of advice or commitment."
+    disclaimerText: "These calculations are indicative and do not constitute any form of advice or commitment.",
+    resNetCostLabel: "Net Cost of the Loan (Annual Cash Flow - Annual Cost):",
   },
   fr: {
     pageTitle: "Calculateur de Financement Immobilier Prime",
@@ -65,7 +66,8 @@ const i18n = {
     resMortgagePartLabel: "Part Hypothécaire (60% de la Valeur du Bien) :",
     resLombardPartLabel: "Partie Lombard (Garantie par le Portefeuille) :",
     disclaimerTitle: "Avertissement",
-    disclaimerText: "Ces calculs sont fournis à titre indicatif et ne constituent ni un conseil ni un engagement."
+    disclaimerText: "Ces calculs sont fournis à titre indicatif et ne constituent ni un conseil ni un engagement.",
+    resNetCostLabel: "Coût Net du Prêt (Flux de Trésorerie Annuel - Coût Annuel) :",
   }
 };
 
@@ -73,7 +75,7 @@ let currentLang = 'en';
 
 // Default values
 const defaultValues = {
-  bankMargin: 0.60,
+  bankMargin: 1.1,
   ltvProperty: 60,
   ltvPortfolio: 60,
   portfolioYield: 6
@@ -178,69 +180,78 @@ Template.calculator.events({
     const lombardPart = totalLoan - mortgagePart;
     console.log('Lombard Part:', lombardPart);
 
-    // Calculate interest rate (Euribor + margin) - convert from percentage to decimal
+    // Calculate interest rate (Euribor + margin)
     const interestRate = (euribor + bankMargin) / 100;
     console.log('Interest Rate:', interestRate);
 
-    // Calculate annual loan cost using the decimal interest rate
+    // Calculate annual loan cost
     const annualLoanCost = totalLoan * interestRate;
     console.log('Annual Loan Cost:', annualLoanCost);
 
-    // Calculate annual portfolio cash flow (using decimal percentage)
+    // Calculate annual portfolio cash flow
     const annualCashFlow = portfolioRequired * (portfolioYield / 100);
     console.log('Annual Cash Flow:', annualCashFlow);
 
-    // Calculate affordability ratio (handle case when annualRevenue is 0)
+    // Calculate net cost of the loan
+    const netCost = annualCashFlow - annualLoanCost;
+    console.log('Net Cost:', netCost);
+
+    // Calculate affordability ratio
     let affordabilityRatio = 0;
     let isAffordable = false;
+    let affordabilityText = '';
     
     if (annualRevenue > 0) {
       affordabilityRatio = annualLoanCost / annualRevenue;
       isAffordable = annualLoanCost <= (annualRevenue * 0.35);
+      affordabilityText = `${isAffordable ? 'Yes' : 'No'}, annual cost is ${formatPercentage(affordabilityRatio)} of annual revenue`;
+    } else {
+      affordabilityText = 'Please enter annual revenue to calculate affordability';
     }
-    
-    console.log('Affordability:', { 
-      ratio: affordabilityRatio, 
-      isAffordable, 
-      annualLoanCost, 
-      annualRevenue 
-    });
-
-    // Update affordability display
-    const affordabilityText = annualRevenue > 0
-      ? `${isAffordable ? 'Yes' : 'No'}, annual cost is ${formatPercentage(affordabilityRatio)} of annual revenue`
-      : 'Please enter annual revenue to calculate affordability';
-
-    document.getElementById('affordability').textContent = affordabilityText;
-    document.getElementById('affordability').className = annualRevenue > 0
-      ? (isAffordable ? 'status-value success-bg' : 'status-value warning-bg')
-      : 'status-value';
 
     // Update display
     document.querySelector('.results').style.display = 'block';
-    document.getElementById('interestRate').textContent = formatPercentage(interestRate);
-    document.getElementById('totalLoan').textContent = formatCurrency(totalLoan);
-    document.getElementById('annualLoanCost').textContent = formatCurrency(annualLoanCost);
-    document.getElementById('collateralRequired').textContent = formatCurrency(portfolioRequired);
-    document.getElementById('quarterlyCashFlow').textContent = formatCurrency(annualCashFlow);
-    document.getElementById('mortgagePart').textContent = formatCurrency(mortgagePart);
-    document.getElementById('lombardPart').textContent = formatCurrency(lombardPart);
+    
+    // Update all result fields with null checks
+    const updateElement = (id, value) => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = value;
+    };
 
-    // Inside the submit handler, after calculating mortgage and lombard parts
+    updateElement('interestRate', formatPercentage(interestRate));
+    updateElement('totalLoan', formatCurrency(totalLoan));
+    updateElement('annualLoanCost', formatCurrency(annualLoanCost));
+    updateElement('collateralRequired', formatCurrency(portfolioRequired));
+    updateElement('quarterlyCashFlow', formatCurrency(annualCashFlow));
+    updateElement('netCost', formatCurrency(netCost));
+    updateElement('affordability', affordabilityText);
+
+    // Update loan structure bars
     const mortgagePercentage = (mortgagePart / totalLoan) * 100;
     const lombardPercentage = (lombardPart / totalLoan) * 100;
 
-    // Update progress bars
     const mortgageBar = document.getElementById('mortgageBar');
     const lombardBar = document.getElementById('lombardBar');
 
-    mortgageBar.style.width = `${mortgagePercentage}%`;
-    mortgageBar.setAttribute('aria-valuenow', mortgagePercentage);
-    mortgageBar.textContent = `Mortgage: ${formatCurrency(mortgagePart)}`;
+    if (mortgageBar) {
+      mortgageBar.style.width = `${mortgagePercentage}%`;
+      mortgageBar.setAttribute('aria-valuenow', mortgagePercentage);
+      mortgageBar.textContent = `Mortgage: ${formatCurrency(mortgagePart)}`;
+    }
 
-    lombardBar.style.width = `${lombardPercentage}%`;
-    lombardBar.setAttribute('aria-valuenow', lombardPercentage);
-    lombardBar.textContent = `Lombard: ${formatCurrency(lombardPart)}`;
+    if (lombardBar) {
+      lombardBar.style.width = `${lombardPercentage}%`;
+      lombardBar.setAttribute('aria-valuenow', lombardPercentage);
+      lombardBar.textContent = `Lombard: ${formatCurrency(lombardPart)}`;
+    }
+
+    // Update affordability styling
+    const affordabilityElement = document.getElementById('affordability');
+    if (affordabilityElement) {
+      affordabilityElement.className = annualRevenue > 0
+        ? (isAffordable ? 'status-value success-bg' : 'status-value warning-bg')
+        : 'status-value';
+    }
   },
 
   'click .send-results'(event) {
@@ -258,7 +269,8 @@ Template.calculator.events({
       annualCashFlow: document.getElementById('quarterlyCashFlow').textContent,
       affordability: document.getElementById('affordability').textContent,
       mortgagePart: document.getElementById('mortgageBar').textContent,
-      lombardPart: document.getElementById('lombardBar').textContent
+      lombardPart: document.getElementById('lombardBar').textContent,
+      netCost: document.getElementById('netCost').textContent,
     };
 
     Meteor.call('sendResultsEmail', { to: email, results }, (error) => {
