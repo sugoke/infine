@@ -77,7 +77,6 @@ let currentLang = 'en';
 const defaultValues = {
   bankMargin: 1.1,
   ltvProperty: 60,
-  ltvPortfolio: 60,
   portfolioYield: 6
 };
 
@@ -97,8 +96,8 @@ async function setDefaultValues() {
     document.getElementById('euribor').value = formatInputNumber(euriborRate, true);
     document.getElementById('bankMargin').value = formatInputNumber(defaultValues.bankMargin, true);
     document.getElementById('ltvProperty').value = formatInputNumber(defaultValues.ltvProperty, true);
-    document.getElementById('ltvPortfolio').value = formatInputNumber(defaultValues.ltvPortfolio, true);
     document.getElementById('portfolioYield').value = formatInputNumber(defaultValues.portfolioYield, true);
+    document.getElementById('ltvPortfolio').value = "70";
   } catch (error) {
     console.error('Error setting default values:', error);
   }
